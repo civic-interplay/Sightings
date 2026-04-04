@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moderation — Sightings</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --black: #000;
+    --purple: #7D50BD;
+    --pink: #E076DB;
+    --terracotta: #D16D54;
+    --lavender: #F8DFF6;
+    --sand: #DACCBA;
+    --olive: #454E41;
+    --periwinkle: #8E9BDD;
+  }
+  body {
+    background: #0a0a0a;
+    color: var(--sand);
+    font-family: 'Georgia', serif;
+    min-height: 100vh;
+    padding: 32px 24px;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 28px;
+  }
+  h1 { font-size: 18px; font-weight: normal; letter-spacing: 0.12em; color: var(--sand); }
+  .subtitle { font-size: 11px; opacity: 0.4; margin-top: 3px; letter-spacing: 0.08em; }
+  #stats {
+    display: flex;
+    gap: 20px;
+    font-size: 11px;
+    opacity: 0.5;
+    letter-spacing: 0.08em;
+  }
+  #stats span { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  #stats strong { font-size: 20px; font-weight: normal; opacity: 0.9; }
+
+  #filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .filter-btn {
+    background: none;
+    border: 1px solid rgba(218,204,186,0.2);
+    color: var(--sand);
+    padding: 5px 14px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    border-radius: 2px;
+    opacity: 0.5;
+    transition: all 0.2s;
+  }
+  .filter-btn.active { opacity: 1; border-color: var(--pink); color: var(--pink); }
+
+  #sightings-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .sighting-row {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(218,204,186,0.1);
+    border-radius: 3px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .sighting-row .kind-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+  .sighting-row .content { flex: 1; }
+  .sighting-row .text { font-style: italic; font-size: 14px; line-height: 1.5; }
+  .sighting-row .meta {
+    font-size: 10px;
+    opacity: 0.45;
+    margin-top: 5px;
+    letter-spacing: 0.06em;
+    display: flex;
+    gap: 12px;
+  }
+  .sighting-row .status-badge {
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .badge-approved  { background: rgba(69,78,65,0.4);   color: #9aaa94; }
+  .badge-pending   { background: rgba(248,223,246,0.15); color: var(--lavender); }
+  .badge-rejected  { background: rgba(209,109,84,0.2);  color: var(--terracotta); }
+
+  .actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+  .act-btn {
+    background: none;
+    border: 1px solid rgba(218,204,186,0.2);
+    color: var(--sand);
+    padding: 5px 12px;
+    font-size: 11px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    opacity: 0.6;
+  }
+  .act-btn:hover { opacity: 1; }
+  .act-btn.approve:hover { border-color: var(--olive); color: #9aaa94; }
+  .act-btn.flag:hover    { border-color: var(--lavender); color: var(--lavender); }
+  .act-btn.reject:hover  { border-color: var(--terracotta); color: var(--terracotta); }
+
+  #no-items { opacity: 0.3; font-size: 13px; text-align: center; padding: 40px; }
+  #last-refresh { font-size: 10px; opacity: 0.25; letter-spacing: 0.06em; text-align: right; margin-top: 20px; }
+  #error-msg { color: var(--terracotta); font-size: 12px; margin-bottom: 16px; opacity: 0.8; }
+
+  .kind-ecological  { background: var(--olive); }
+  .kind-social      { background: var(--terracotta); }
+  .kind-sensory     { background: var(--pink); }
+  .kind-cultural    { background: var(--purple); }
+  .kind-water       { background: var(--periwinkle); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Moderation</h1>
+    <div class="subtitle">Sightings — Civic Interplay</div>
+  </div>
+  <div id="stats">
+    <span><strong id="stat-total">—</strong> total</span>
+    <span><strong id="stat-approved">—</strong> approved</span>
+    <span><strong id="stat-pending">—</strong> pending</span>
+    <span><strong id="stat-rejected">—</strong> rejected</span>
+  </div>
+</header>
+
+<div id="error-msg"></div>
+
+<div id="filter-bar">
+  <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">All</button>
+  <button class="filter-btn" data-filter="pending" onclick="setFilter('pending')">Pending</button>
+  <button class="filter-btn" data-filter="approved" onclick="setFilter('approved')">Approved</button>
+  <button class="filter-btn" data-filter="rejected" onclick="setFilter('rejected')">Rejected</button>
+</div>
+
+<div id="sightings-list"></div>
+<div id="no-items" style="display:none">Nothing to show here.</div>
+<div id="last-refresh"></div>
+
+<script>
+let allSightings = [];
+let currentFilter = 'all';
+
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === f);
+  });
+  renderList();
+}
+
+function renderList() {
+  const list = document.getElementById('sightings-list');
+  const none = document.getElementById('no-items');
+  const filtered = currentFilter === 'all'
+    ? allSightings
+    : allSightings.filter(s => s.status === currentFilter);
+
+  if (filtered.length === 0) {
+    list.innerHTML = '';
+    none.style.display = 'block';
+    return;
+  }
+  none.style.display = 'none';
+
+  list.innerHTML = filtered.map(s => `
+    <div class="sighting-row" id="row-${s.id}">
+      <div class="kind-dot kind-${s.kind}"></div>
+      <div class="content">
+        <div class="text">${s.text}</div>
+        <div class="meta">
+          <span>${s.kind}</span>
+          ${s.location ? `<span>↳ ${s.location}</span>` : ''}
+          ${s.species && s.species.length ? `<span>${s.species.join(', ')}</span>` : ''}
+          ${s.actions && s.actions.length ? `<span>${s.actions.join(', ')}</span>` : ''}
+          <span>${new Date(s.timestamp).toLocaleTimeString()}</span>
+          ${s.moderationReason ? `<span title="Moderation reason">${s.moderationReason}</span>` : ''}
+        </div>
+      </div>
+      <div class="actions">
+        <span class="status-badge badge-${s.status}">${s.status}</span>
+        ${s.status !== 'approved'  ? `<button class="act-btn approve" onclick="updateStatus('${s.id}','approved')">Approve</button>` : ''}
+        ${s.status !== 'pending'   ? `<button class="act-btn flag"    onclick="updateStatus('${s.id}','pending')">Flag</button>` : ''}
+        ${s.status !== 'rejected'  ? `<button class="act-btn reject"  onclick="updateStatus('${s.id}','rejected')">Reject</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+async function updateStatus(id, status) {
+  try {
+    const res = await fetch(`/api/sightings/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    if (!res.ok) throw new Error();
+    const updated = await res.json();
+    const idx = allSightings.findIndex(s => s.id === id);
+    if (idx !== -1) allSightings[idx] = updated;
+    renderList();
+    updateStats();
+  } catch (e) {
+    document.getElementById('error-msg').textContent = 'Could not update — is the server running?';
+  }
+}
+
+function updateStats() {
+  const total = allSightings.length;
+  const approved = allSightings.filter(s => s.status === 'approved').length;
+  const pending   = allSightings.filter(s => s.status === 'pending').length;
+  const rejected  = allSightings.filter(s => s.status === 'rejected').length;
+  document.getElementById('stat-total').textContent    = total;
+  document.getElementById('stat-approved').textContent = approved;
+  document.getElementById('stat-pending').textContent  = pending;
+  document.getElementById('stat-rejected').textContent = rejected;
+}
+
+async function fetchAll() {
+  try {
+    const res = await fetch('/api/sightings/all');
+    if (!res.ok) throw new Error();
+    allSightings = await res.json();
+    document.getElementById('error-msg').textContent = '';
+    renderList();
+    updateStats();
+    document.getElementById('last-refresh').textContent =
+      'Last updated ' + new Date().toLocaleTimeString();
+  } catch {
+    document.getElementById('error-msg').textContent =
+      'Could not connect to server. Make sure the Express server is running at localhost:3000.';
+  }
+}
+
+fetchAll();
+setInterval(fetchAll, 10000);
+</script>
+</body>
+</html>

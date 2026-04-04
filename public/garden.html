@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Garden — Civic Interplay Sightings</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-light: #F8DFF6;
+    --bg-dark:  #000000;
+    --purple:     #7D50BD;
+    --pink:       #E076DB;
+    --terracotta: #D16D54;
+    --lavender:   #F8DFF6;
+    --sand:       #DACCBA;
+    --olive:      #454E41;
+    --periwinkle: #8E9BDD;
+  }
+
+  body {
+    background: var(--bg-light);
+    font-family: 'Georgia', serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    transition: background 0.6s;
+  }
+  body.dark {
+    background: var(--bg-dark);
+  }
+
+  #garden-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+  }
+
+  /* UI */
+  #header {
+    position: fixed;
+    top: 20px; left: 24px;
+    z-index: 10;
+  }
+  #header h1 {
+    font-size: 15px;
+    font-weight: normal;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--olive);
+    opacity: 0.7;
+    transition: color 0.4s;
+  }
+  body.dark #header h1 { color: var(--sand); }
+  #header .subtitle {
+    font-size: 11px;
+    opacity: 0.45;
+    margin-top: 2px;
+    letter-spacing: 0.08em;
+    color: var(--olive);
+    transition: color 0.4s;
+  }
+  body.dark #header .subtitle { color: var(--sand); }
+
+  #controls {
+    position: fixed;
+    top: 20px; right: 24px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    z-index: 10;
+  }
+  .ctrl-btn {
+    background: none;
+    border: 1px solid rgba(69,78,65,0.3);
+    color: var(--olive);
+    padding: 6px 14px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.3s;
+  }
+  body.dark .ctrl-btn { border-color: rgba(218,204,186,0.3); color: var(--sand); }
+  .ctrl-btn:hover { background: rgba(69,78,65,0.08); }
+  body.dark .ctrl-btn:hover { background: rgba(218,204,186,0.08); }
+  .view-link {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    color: var(--olive);
+    opacity: 0.5;
+    transition: opacity 0.2s;
+  }
+  body.dark .view-link { color: var(--sand); }
+  .view-link:hover { opacity: 1; }
+
+  #counter {
+    position: fixed;
+    bottom: 24px; left: 24px;
+    font-size: 11px;
+    opacity: 0.35;
+    letter-spacing: 0.08em;
+    z-index: 10;
+    color: var(--olive);
+    transition: color 0.4s;
+  }
+  body.dark #counter { color: var(--sand); }
+
+  /* Tooltip */
+  #tooltip {
+    position: fixed;
+    background: rgba(0,0,0,0.82);
+    color: var(--sand);
+    padding: 9px 13px;
+    border-radius: 3px;
+    font-size: 12px;
+    max-width: 220px;
+    line-height: 1.5;
+    pointer-events: none;
+    z-index: 20;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  #tooltip.visible { opacity: 1; }
+  #tooltip .tip-kind {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.6;
+    margin-bottom: 4px;
+  }
+
+  /* Contribute panel */
+  #contribute-btn {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: none;
+    border: 1px solid rgba(125,80,189,0.5);
+    color: var(--purple);
+    padding: 10px 20px;
+    font-size: 13px;
+    font-family: 'Georgia', serif;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.3s;
+    z-index: 10;
+  }
+  #contribute-btn:hover { background: rgba(125,80,189,0.1); }
+
+  #panel {
+    position: fixed;
+    bottom: 0; right: 0;
+    width: 380px;
+    background: rgba(248,223,246,0.97);
+    border-left: 1px solid rgba(125,80,189,0.2);
+    border-top: 1px solid rgba(125,80,189,0.2);
+    padding: 28px;
+    transform: translateY(100%);
+    transition: transform 0.4s ease;
+    z-index: 20;
+  }
+  body.dark #panel {
+    background: rgba(10,5,15,0.95);
+    border-color: rgba(125,80,189,0.3);
+  }
+  #panel.open { transform: translateY(0); }
+
+  #panel h2 {
+    font-size: 18px;
+    font-weight: normal;
+    color: var(--purple);
+    margin-bottom: 6px;
+  }
+  #panel .invitation {
+    font-size: 12px;
+    opacity: 0.65;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    color: var(--olive);
+  }
+  body.dark #panel .invitation { color: var(--sand); }
+
+  #panel label {
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--olive);
+    opacity: 0.6;
+    margin-bottom: 5px;
+  }
+  body.dark #panel label { color: var(--sand); }
+
+  #panel textarea, #panel input, #panel select {
+    width: 100%;
+    background: rgba(255,255,255,0.6);
+    border: 1px solid rgba(125,80,189,0.25);
+    color: #222;
+    padding: 9px 11px;
+    font-size: 13px;
+    font-family: 'Georgia', serif;
+    border-radius: 2px;
+    margin-bottom: 14px;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  body.dark #panel textarea,
+  body.dark #panel input,
+  body.dark #panel select {
+    background: rgba(255,255,255,0.06);
+    color: var(--sand);
+  }
+  #panel textarea:focus, #panel input:focus, #panel select:focus {
+    border-color: rgba(125,80,189,0.5);
+  }
+  #panel select option { background: #f0e0f0; }
+  body.dark #panel select option { background: #111; }
+
+  .panel-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .btn-submit {
+    flex: 1;
+    background: rgba(125,80,189,0.15);
+    border: 1px solid rgba(125,80,189,0.4);
+    color: var(--purple);
+    padding: 10px;
+    font-size: 13px;
+    font-family: 'Georgia', serif;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+  .btn-submit:hover { background: rgba(125,80,189,0.25); }
+  .btn-cancel {
+    background: none;
+    border: 1px solid rgba(69,78,65,0.25);
+    color: var(--olive);
+    padding: 10px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 2px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+  }
+  body.dark .btn-cancel { color: var(--sand); border-color: rgba(218,204,186,0.2); }
+  .btn-cancel:hover { opacity: 1; }
+
+  #status-msg {
+    font-size: 11px;
+    margin-top: 10px;
+    color: var(--purple);
+    min-height: 16px;
+    opacity: 0.7;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="garden-canvas"></canvas>
+
+<div id="header">
+  <h1>Garden of Sightings</h1>
+  <div class="subtitle">Civic Interplay</div>
+</div>
+
+<div id="controls">
+  <a href="/" class="view-link">← Tapestry view</a>
+  <button class="ctrl-btn" onclick="toggleDark()">● light</button>
+</div>
+
+<div id="counter">0 sightings</div>
+<div id="tooltip"><div class="tip-kind" id="tip-kind"></div><div id="tip-text"></div></div>
+
+<button id="contribute-btn" onclick="openPanel()">Plant a seed</button>
+
+<div id="panel">
+  <h2>Plant a seed</h2>
+  <p class="invitation">Share a hidden intelligence you feel is shaping the place you're in. Something you hear, see, or feel. It will grow into the garden.</p>
+
+  <label>Your noticing</label>
+  <textarea id="input-text" rows="3" placeholder="Describe what you notice..."></textarea>
+
+  <label>Where (optional)</label>
+  <input id="input-location" type="text" placeholder="A place name, or just 'here'">
+
+  <label>Kind of intelligence</label>
+  <select id="input-kind">
+    <option value="ecological">Ecological — more-than-human life and patterns</option>
+    <option value="social">Social — human presence, behaviour, connection</option>
+    <option value="sensory">Sensory — embodied perception, somatic data</option>
+    <option value="cultural">Cultural — memory, story, inscription</option>
+    <option value="water">Water — hydrological flows and presence</option>
+  </select>
+
+  <div class="panel-actions">
+    <button class="btn-submit" onclick="submitSighting()">Plant this seed</button>
+    <button class="btn-cancel" onclick="closePanel()">Cancel</button>
+  </div>
+  <div id="status-msg"></div>
+</div>
+
+<script>
+const PALETTE = {
+  ecological: '#454E41',
+  social:     '#D16D54',
+  sensory:    '#E076DB',
+  cultural:   '#7D50BD',
+  water:      '#8E9BDD'
+};
+
+const canvas = document.getElementById('garden-canvas');
+const ctx = canvas.getContext('2d');
+let W = window.innerWidth, H = window.innerHeight;
+let isDark = false;
+let sightings = [];
+let trees = [];
+let animFrame = 0;
+let hoveredBranch = null;
+
+function resize() {
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W; canvas.height = H;
+  buildTrees();
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ---- Seeded random per sighting ----
+function seededRand(seed) {
+  let s = seed;
+  return function() {
+    s = (s * 9301 + 49297) % 233280;
+    return s / 233280;
+  };
+}
+
+function hashStr(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+// ---- Tree generation ----
+function buildTrees() {
+  trees = [];
+  const n = sightings.length;
+  if (n === 0) return;
+
+  // Fan arc: 90 degrees centred upward, anchored at bottom-centre
+  const rootX = W / 2;
+  const rootY = H * 0.92;
+  const arcSpan = Math.PI * 0.5; // 90 degrees
+  const baseAngle = -Math.PI / 2; // straight up
+
+  sightings.forEach((s, i) => {
+    const t = n === 1 ? 0.5 : i / (n - 1);
+    const angle = baseAngle - arcSpan / 2 + t * arcSpan;
+    const rng = seededRand(hashStr(s.id || s.text));
+    const col = PALETTE[s.kind] || '#7D50BD';
+    const branches = [];
+    generateBranches(branches, rootX, rootY, angle, H * 0.09, 0, rng, col, s);
+    trees.push({ sighting: s, branches, rootX, rootY, col });
+  });
+}
+
+function generateBranches(branches, x, y, angle, length, depth, rng, col, sighting) {
+  if (length < 8 || depth > 5) return;
+
+  // Curve control point
+  const curve = (rng() - 0.5) * 0.6 * (1 + depth * 0.3);
+  const midAngle = angle + curve;
+  const ex = x + Math.cos(angle) * length;
+  const ey = y + Math.sin(angle) * length;
+  const cpx = x + Math.cos(midAngle) * length * 0.55;
+  const cpy = y + Math.sin(midAngle) * length * 0.55;
+
+  const thickness = Math.max(0.5, 3.5 - depth * 0.55);
+  const alpha = Math.min(1, 0.9 - depth * 0.07);
+
+  branches.push({ x1: x, y1: y, cx: cpx, cy: cpy, x2: ex, y2: ey, thickness, col, alpha, depth, sighting });
+
+  // Scatter decorations
+  const decorCount = Math.floor(rng() * 3) + (depth >= 2 ? 2 : 0);
+  for (let d = 0; d < decorCount; d++) {
+    const t = 0.3 + rng() * 0.65;
+    const bx = x + (cpx - x) * t * 2 < ex ? lerp3(x, cpx, ex, t).x : ex;
+    const by = lerp3(x, cpx, ex, t).y;
+    const decT = rng();
+    let decType = 'dot';
+    if (decT < 0.35) decType = 'leaf';
+    else if (decT < 0.65) decType = 'petal';
+    else decType = 'dot';
+    branches.push({ type: decType, x: lerp3(x, cpx, ex, t).x, y: by, col, alpha: alpha * 0.85, depth, sighting });
+  }
+
+  // Bloom at tip (with extra blooms at depth 1+)
+  if (rng() < 0.65 || depth <= 1) {
+    branches.push({ type: 'bloom', x: ex, y: ey, col, alpha, depth, sighting });
+  }
+  // Extra scattered bloom
+  if (depth >= 1 && rng() < 0.35) {
+    const t2 = 0.5 + rng() * 0.4;
+    const p2 = lerp3(x, cpx, ex, t2);
+    branches.push({ type: 'bloom', x: p2.x + (rng()-0.5)*12, y: p2.y + (rng()-0.5)*12, col, alpha: alpha * 0.7, depth, sighting });
+  }
+
+  // Fork — force early at depth 0
+  const forkChance = depth === 0 ? 1.0 : depth === 1 ? 0.85 : 0.55 - depth * 0.08;
+  if (rng() < forkChance) {
+    const numForks = depth === 0 ? (rng() < 0.5 ? 2 : 3) : (rng() < 0.6 ? 2 : 3);
+    const spreadBase = 0.28 + rng() * 0.18;
+    for (let f = 0; f < numForks; f++) {
+      const spread = (f / (numForks - 1) - 0.5) * spreadBase * (Math.PI + depth * 0.3);
+      const childAngle = angle + spread + (rng() - 0.5) * 0.12;
+      const childLen = length * (0.58 + rng() * 0.22);
+      generateBranches(branches, ex, ey, childAngle, childLen, depth + 1, rng, col, sighting);
+    }
+  } else {
+    // Slight bend continuation
+    const childAngle = angle + (rng() - 0.5) * 0.3;
+    generateBranches(branches, ex, ey, childAngle, length * (0.62 + rng() * 0.15), depth + 1, rng, col, sighting);
+  }
+}
+
+function lerp3(x1, cx, x2, t) {
+  const mt = 1 - t;
+  return {
+    x: mt*mt*x1 + 2*mt*t*cx + t*t*x2,
+    y: mt*mt*0  + 0 // placeholder — we need y too
+  };
+}
+
+// Fix lerp3 to include y
+function bezierPoint(x1, y1, cx, cy, x2, y2, t) {
+  const mt = 1 - t;
+  return {
+    x: mt*mt*x1 + 2*mt*t*cx + t*t*x2,
+    y: mt*mt*y1 + 2*mt*t*cy + t*t*y2
+  };
+}
+
+function generateBranches2(branches, x, y, angle, length, depth, rng, col, sighting) {
+  if (length < 8 || depth > 5) return;
+
+  const curve = (rng() - 0.5) * 0.6 * (1 + depth * 0.3);
+  const midAngle = angle + curve;
+  const ex = x + Math.cos(angle) * length;
+  const ey = y + Math.sin(angle) * length;
+  const cpx = x + Math.cos(midAngle) * length * 0.55;
+  const cpy = y + Math.sin(midAngle) * length * 0.55;
+
+  const thickness = Math.max(0.5, 3.5 - depth * 0.55);
+  const alpha = Math.min(1, 0.9 - depth * 0.07);
+
+  branches.push({ x1: x, y1: y, cx: cpx, cy: cpy, x2: ex, y2: ey, thickness, col, alpha, depth, sighting });
+
+  // Decorations along branch
+  const decorCount = Math.floor(rng() * 3) + (depth >= 2 ? 2 : 0);
+  for (let d = 0; d < decorCount; d++) {
+    const t = 0.3 + rng() * 0.6;
+    const pt = bezierPoint(x, y, cpx, cpy, ex, ey, t);
+    const decT = rng();
+    let decType = decT < 0.35 ? 'leaf' : decT < 0.65 ? 'petal' : 'dot';
+    branches.push({ type: decType, x: pt.x, y: pt.y, col, alpha: alpha * 0.85, depth, sighting });
+  }
+
+  // Blooms at tip
+  if (rng() < 0.65 || depth <= 1) {
+    branches.push({ type: 'bloom', x: ex, y: ey, col, alpha, depth, sighting });
+  }
+  if (depth >= 1 && rng() < 0.35) {
+    const pt2 = bezierPoint(x, y, cpx, cpy, ex, ey, 0.5 + rng() * 0.4);
+    branches.push({ type: 'bloom', x: pt2.x + (rng()-0.5)*12, y: pt2.y + (rng()-0.5)*12, col, alpha: alpha * 0.7, depth, sighting });
+  }
+
+  // Fork early
+  const forkChance = depth === 0 ? 1.0 : depth === 1 ? 0.85 : 0.55 - depth * 0.08;
+  if (rng() < forkChance) {
+    const numForks = depth === 0 ? (rng() < 0.5 ? 2 : 3) : (rng() < 0.6 ? 2 : 3);
+    const spreadBase = 0.28 + rng() * 0.18;
+    for (let f = 0; f < numForks; f++) {
+      const spread = numForks > 1 ? (f / (numForks - 1) - 0.5) * spreadBase * (Math.PI + depth * 0.3) : 0;
+      const childAngle = angle + spread + (rng() - 0.5) * 0.12;
+      const childLen = length * (0.58 + rng() * 0.22);
+      generateBranches2(branches, ex, ey, childAngle, childLen, depth + 1, rng, col, sighting);
+    }
+  } else {
+    generateBranches2(branches, ex, ey, angle + (rng()-0.5)*0.3, length * (0.62 + rng()*0.15), depth+1, rng, col, sighting);
+  }
+}
+
+// Rebuild with corrected version
+function buildTrees2() {
+  trees = [];
+  const n = sightings.length;
+  if (n === 0) return;
+  const rootX = W / 2;
+  const rootY = H * 0.92;
+  const arcSpan = Math.PI * 0.5;
+  const baseAngle = -Math.PI / 2;
+
+  sightings.forEach((s, i) => {
+    const t = n === 1 ? 0.5 : i / (n - 1);
+    const angle = baseAngle - arcSpan / 2 + t * arcSpan;
+    const rng = seededRand(hashStr(s.id || s.text));
+    const col = PALETTE[s.kind] || '#7D50BD';
+    const branches = [];
+    generateBranches2(branches, rootX, rootY, angle, H * 0.09, 0, rng, col, s);
+    trees.push({ sighting: s, branches, rootX, rootY, col });
+  });
+}
+
+// ---- Draw ----
+function drawLeaf(x, y, col, size, angle) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(size*0.5, -size*0.6, size*1.1, -size*0.3, size, 0);
+  ctx.bezierCurveTo(size*1.1, size*0.3, size*0.5, size*0.6, 0, 0);
+  ctx.fillStyle = col;
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawBloom(x, y, col, size, t) {
+  const petals = 5;
+  const pulse = 0.9 + 0.1 * Math.sin(t * 1.2);
+  for (let p = 0; p < petals; p++) {
+    const a = (p / petals) * Math.PI * 2;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(a);
+    ctx.beginPath();
+    ctx.ellipse(0, -size * 0.55 * pulse, size * 0.32, size * 0.52, 0, 0, Math.PI * 2);
+    ctx.fillStyle = col;
+    ctx.globalAlpha *= 0.75;
+    ctx.fill();
+    ctx.restore();
+  }
+  // Centre dot
+  ctx.beginPath();
+  ctx.arc(x, y, size * 0.22, 0, Math.PI * 2);
+  ctx.fillStyle = isDark ? '#DACCBA' : '#fff';
+  ctx.fill();
+}
+
+function drawGarden(t) {
+  const bg = isDark ? '#000000' : '#F8DFF6';
+  ctx.clearRect(0, 0, W, H);
+
+  // Ground line
+  ctx.beginPath();
+  ctx.moveTo(0, H * 0.92);
+  ctx.lineTo(W, H * 0.92);
+  ctx.strokeStyle = isDark ? 'rgba(218,204,186,0.08)' : 'rgba(69,78,65,0.12)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Root glow
+  if (trees.length > 0) {
+    const rx = W/2, ry = H * 0.92;
+    const grd = ctx.createRadialGradient(rx, ry, 0, rx, ry, 60);
+    grd.addColorStop(0, 'rgba(125,80,189,0.18)');
+    grd.addColorStop(1, 'rgba(125,80,189,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(rx, ry, 60, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  let allBranches = [];
+  trees.forEach(tree => allBranches = allBranches.concat(tree.branches));
+
+  // Draw stems first
+  allBranches.filter(b => b.x1 !== undefined).forEach(b => {
+    const isHovered = hoveredBranch && hoveredBranch.sighting === b.sighting;
+    ctx.save();
+    ctx.globalAlpha = b.alpha * (isHovered ? 1.2 : 1);
+    ctx.beginPath();
+    ctx.moveTo(b.x1, b.y1);
+    ctx.quadraticCurveTo(b.cx, b.cy, b.x2, b.y2);
+    ctx.strokeStyle = b.col;
+    ctx.lineWidth = b.thickness * (isHovered ? 1.4 : 1);
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+  });
+
+  // Draw decorations
+  allBranches.filter(b => b.type).forEach(b => {
+    const isHovered = hoveredBranch && hoveredBranch.sighting === b.sighting;
+    ctx.save();
+    ctx.globalAlpha = b.alpha * (isHovered ? 1.3 : 1);
+
+    if (b.type === 'bloom') {
+      const sz = Math.max(5, 11 - b.depth * 1.5);
+      drawBloom(b.x, b.y, b.col, sz, t);
+    } else if (b.type === 'leaf') {
+      const sz = Math.max(4, 9 - b.depth * 1.2);
+      const ang = Math.atan2(b.y, b.x) + (Math.random() - 0.5) * 0.6;
+      drawLeaf(b.x, b.y, b.col, sz, ang);
+    } else if (b.type === 'petal') {
+      const sz = Math.max(2, 5 - b.depth * 0.5);
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, sz, 0, Math.PI * 2);
+      ctx.fillStyle = b.col;
+      ctx.fill();
+    } else if (b.type === 'dot') {
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, Math.max(1, 2.5 - b.depth * 0.3), 0, Math.PI * 2);
+      ctx.fillStyle = b.col;
+      ctx.fill();
+    }
+    ctx.restore();
+  });
+
+  // Count label
+  const n = sightings.length;
+  document.getElementById('counter').textContent = `${n} sighting${n !== 1 ? 's' : ''}`;
+}
+
+// ---- Hover detection ----
+canvas.addEventListener('mousemove', e => {
+  const mx = e.clientX, my = e.clientY;
+  let found = null;
+  let minDist = 18;
+
+  for (const tree of trees) {
+    for (const b of tree.branches) {
+      if (b.type) {
+        const d = Math.hypot(b.x - mx, b.y - my);
+        if (d < minDist) { minDist = d; found = b; }
+      }
+    }
+  }
+
+  hoveredBranch = found;
+  const tip = document.getElementById('tooltip');
+  if (found) {
+    document.getElementById('tip-kind').textContent = found.sighting.kind;
+    document.getElementById('tip-text').textContent = found.sighting.text;
+    tip.style.left = (mx + 14) + 'px';
+    tip.style.top  = (my - 10) + 'px';
+    tip.classList.add('visible');
+  } else {
+    tip.classList.remove('visible');
+  }
+});
+canvas.addEventListener('mouseleave', () => {
+  hoveredBranch = null;
+  document.getElementById('tooltip').classList.remove('visible');
+});
+
+// ---- Animation ----
+let tAnim = 0;
+function animate() {
+  requestAnimationFrame(animate);
+  tAnim += 0.016;
+  drawGarden(tAnim);
+}
+
+// ---- Data ----
+const DEMO = [
+  { id:'d1', text:'A magpie calling from the fig tree', kind:'ecological', status:'approved' },
+  { id:'d2', text:'Three people at the same puddle', kind:'social', status:'approved' },
+  { id:'d3', text:'The smell of jasmine, source unknown', kind:'sensory', status:'approved' },
+  { id:'d4', text:'Old sandstone, ferns in every crack', kind:'cultural', status:'approved' },
+  { id:'d5', text:'Stormwater rushing fast and brown', kind:'water', status:'approved' }
+];
+
+async function fetchSightings() {
+  try {
+    const res = await fetch('/api/sightings');
+    if (!res.ok) throw new Error();
+    sightings = await res.json();
+  } catch {
+    sightings = DEMO;
+  }
+  buildTrees2();
+}
+fetchSightings();
+setInterval(fetchSightings, 20000);
+animate();
+
+// ---- Panel ----
+function openPanel()  { document.getElementById('panel').classList.add('open'); }
+function closePanel() { document.getElementById('panel').classList.remove('open'); }
+
+async function submitSighting() {
+  const text = document.getElementById('input-text').value.trim();
+  if (!text) return;
+  const msg = document.getElementById('status-msg');
+  msg.textContent = 'Planting...';
+
+  try {
+    const res = await fetch('/api/sightings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        location: document.getElementById('input-location').value.trim(),
+        kind: document.getElementById('input-kind').value
+      })
+    });
+    const s = await res.json();
+    if (s.status === 'approved') {
+      sightings.push(s);
+      buildTrees2();
+      msg.textContent = 'Your seed has taken root.';
+    } else if (s.status === 'pending') {
+      msg.textContent = 'Thank you — your seed is with the hosts.';
+    } else {
+      msg.textContent = 'This one couldn\'t be planted.';
+    }
+    document.getElementById('input-text').value = '';
+    document.getElementById('input-location').value = '';
+    setTimeout(closePanel, 2000);
+  } catch {
+    msg.textContent = 'Could not reach the server.';
+  }
+}
+
+function toggleDark() {
+  isDark = !isDark;
+  document.body.classList.toggle('dark', isDark);
+  document.querySelector('#controls .ctrl-btn').textContent = isDark ? '○ dark' : '● light';
+}
+</script>
+</body>
+</html>
