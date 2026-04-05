@@ -552,6 +552,34 @@ document.addEventListener('mousemove', e => {
 });
 document.addEventListener('mouseup', () => { dragTarget = null; });
 
+// ---- Touch drag ----
+tapestry.addEventListener('touchstart', e => {
+  const card = e.target.closest('.sighting-card');
+  if (!card) return;
+  e.preventDefault();
+  dragTarget = card;
+  const touch = e.touches[0];
+  const rect = card.getBoundingClientRect();
+  dragOffX = touch.clientX - rect.left - rect.width / 2;
+  dragOffY = touch.clientY - rect.top  - rect.height / 2;
+  card.style.transition = 'none';
+}, { passive: false });
+
+document.addEventListener('touchmove', e => {
+  if (!dragTarget) return;
+  e.preventDefault();
+  const touch = e.touches[0];
+  const x = (touch.clientX - dragOffX) / W;
+  const y = (touch.clientY - dragOffY) / H;
+  dragTarget.style.left = (x * 100) + '%';
+  dragTarget.style.top  = (y * 100) + '%';
+  const id = dragTarget.dataset.id;
+  const s = sightingData.find(s => s.id === id);
+  if (s) { s.x = Math.max(0.05, Math.min(0.95, x)); s.y = Math.max(0.05, Math.min(0.95, y)); }
+}, { passive: false });
+
+document.addEventListener('touchend', () => { dragTarget = null; });
+
 // ---- Render sightings ----
 function renderSightings() {
   tapestry.innerHTML = '';
