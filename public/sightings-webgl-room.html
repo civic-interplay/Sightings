@@ -58,6 +58,23 @@
     display: block;
   }
 
+  /* Fallback atmosphere when Three.js fails to load (privacy blocker, network) */
+  body.no-shader {
+    background:
+      radial-gradient(ellipse 80% 60% at 30% 30%, rgba(125,80,189,0.32), transparent 60%),
+      radial-gradient(ellipse 70% 50% at 70% 70%, rgba(142,155,221,0.24), transparent 65%),
+      radial-gradient(ellipse 60% 40% at 50% 50%, rgba(224,118,219,0.10), transparent 70%),
+      #08060a;
+    background-size: 200% 200%, 180% 180%, 220% 220%, 100% 100%;
+    animation: drift-fallback 90s ease-in-out infinite alternate;
+  }
+  body.no-shader #c { display: none; }
+
+  @keyframes drift-fallback {
+    0%   { background-position: 0% 0%, 100% 100%, 50% 50%, 0 0; }
+    100% { background-position: 40% 30%, 60% 70%, 30% 60%, 0 0; }
+  }
+
   /* Edge vignette so projected atmosphere falls off toward the walls */
   #vignette {
     position: fixed;
@@ -364,13 +381,39 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 /* ———————————————————————————————————————————————————————————————
    Sightings — Room edition
    Projection-first ambient piece. Field-notes pinned to a living glass.
+   Shader is optional: if Three.js fails to load (ad blocker, network),
+   the page still renders cards over a subtle CSS fallback atmosphere.
 ——————————————————————————————————————————————————————————————— */
 
+/* Load Three.js with a fallback CDN. The shader init waits for this. */
+window.__threeReady = new Promise((resolve) => {
+  function tryLoad(url, next) {
+    const s = document.createElement('script');
+    s.src = url;
+    s.onload = () => resolve(true);
+    s.onerror = () => { if (next) next(); else resolve(false); };
+    document.head.appendChild(s);
+  }
+  tryLoad(
+    'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js',
+    () => tryLoad(
+      'https://unpkg.com/three@0.128.0/build/three.min.js',
+      () => tryLoad(
+        'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+        null
+      )
+    )
+  );
+  /* Give up after 6s so the rest of the page continues regardless. */
+  setTimeout(() => resolve(false), 6000);
+});
+</script>
+
+<script>
 const PALETTE = {
   ecological: '#454E41',
   social:     '#D16D54',
@@ -395,15 +438,9 @@ const KIND_CODE = {
   water:      'H2O'
 };
 
-/* ————— Three.js shader scaffolding ————— */
+/* ————— Three.js shader scaffolding (late-bound) ————— */
 const canvas = document.getElementById('c');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(window.innerWidth, window.innerHeight);
-
-const scene = new THREE.Scene();
-const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-const geometry = new THREE.PlaneGeometry(2, 2);
+let renderer = null, scene = null, camera = null, geometry = null;
 
 /* ————— Three atmospheres, softened to cohabit with cards ————— */
 const MODES = [
@@ -589,9 +626,10 @@ function makeFragment(body) {
 }
 
 let currentMode = 0;
-let material, mesh;
+let material = null, mesh = null;
 
 function buildMaterial(modeIdx) {
+  if (!scene) return;
   if (mesh) scene.remove(mesh);
   if (material) material.dispose();
   material = new THREE.ShaderMaterial({
@@ -608,29 +646,52 @@ function buildMaterial(modeIdx) {
 
 function setMode(n) {
   currentMode = ((n % MODES.length) + MODES.length) % MODES.length;
-  buildMaterial(currentMode);
+  if (scene) buildMaterial(currentMode);
   const m = MODES[currentMode];
   document.getElementById('modeLede').textContent = m.lede;
   document.getElementById('modeName').textContent = m.name;
   document.getElementById('statusMode').textContent = m.name.toLowerCase();
 }
 
-buildMaterial(0);
-
 window.addEventListener('resize', () => {
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  if (renderer) renderer.setSize(window.innerWidth, window.innerHeight);
   if (material) material.uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
 });
 
-const clock = new THREE.Clock();
+/* ————— Main animation loop — runs with or without shader ————— */
+const startTime = performance.now();
+function getTime() { return (performance.now() - startTime) / 1000; }
+
 function animate() {
   requestAnimationFrame(animate);
-  const t = clock.getElapsedTime();
+  const t = getTime();
   if (material) material.uniforms.u_time.value = t;
   driftCards(t);
-  renderer.render(scene, camera);
+  if (renderer && scene && camera) renderer.render(scene, camera);
 }
 animate();
+
+/* ————— Initialise shader once Three.js is available (or give up) ————— */
+(async () => {
+  const ok = await window.__threeReady;
+  if (!ok || typeof THREE === 'undefined') {
+    console.warn('[sightings] Three.js unavailable — running without shader atmosphere.');
+    document.body.classList.add('no-shader');
+    return;
+  }
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    scene = new THREE.Scene();
+    camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    geometry = new THREE.PlaneGeometry(2, 2);
+    buildMaterial(currentMode);
+  } catch (err) {
+    console.warn('[sightings] shader init failed:', err);
+    document.body.classList.add('no-shader');
+  }
+})();
 
 /* ————— Cards: field-notes pinned to the glass ————— */
 const field = document.getElementById('field');
