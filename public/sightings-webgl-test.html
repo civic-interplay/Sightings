@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sightings — WebGL Background Test</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    font-family: 'Georgia', serif;
+  }
+  canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
+
+  #ui {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 10;
+  }
+  #header {
+    position: fixed;
+    top: 20px; left: 24px;
+    pointer-events: auto;
+  }
+  #header h1 {
+    font-size: 15px;
+    font-weight: normal;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #DACCBA;
+    opacity: 0.6;
+  }
+  #header .sub {
+    font-size: 11px;
+    opacity: 0.35;
+    margin-top: 2px;
+    letter-spacing: 0.08em;
+    color: #DACCBA;
+  }
+
+  #controls {
+    position: fixed;
+    top: 20px; right: 24px;
+    display: flex;
+    gap: 12px;
+    pointer-events: auto;
+  }
+  .ctrl {
+    background: none;
+    border: 1px solid rgba(218,204,186,0.25);
+    color: #DACCBA;
+    padding: 6px 14px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+  .ctrl:hover { background: rgba(218,204,186,0.08); }
+  .ctrl.active { border-color: #E076DB; color: #E076DB; }
+
+  /* Demo sighting cards */
+  .card {
+    position: fixed;
+    max-width: 200px;
+    padding: 10px 13px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.5;
+    font-style: italic;
+    color: #DACCBA;
+    pointer-events: auto;
+    cursor: grab;
+  }
+  .card .kl {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    opacity: 0.6;
+    margin-bottom: 4px;
+    font-style: normal;
+  }
+  .eco { background: rgba(69,78,65,0.82); border-left: 3px solid #454E41; }
+  .soc { background: rgba(209,109,84,0.82); border-left: 3px solid #D16D54; color: #F8DFF6; }
+  .sen { background: rgba(224,118,219,0.82); border-left: 3px solid #E076DB; color: #000; }
+  .cul { background: rgba(125,80,189,0.82); border-left: 3px solid #7D50BD; color: #F8DFF6; }
+  .wat { background: rgba(142,155,221,0.82); border-left: 3px solid #8E9BDD; color: #000; }
+
+  #label {
+    position: fixed;
+    bottom: 24px; left: 24px;
+    font-size: 10px;
+    color: #DACCBA;
+    opacity: 0.3;
+    letter-spacing: 0.1em;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<div id="ui">
+  <div id="header">
+    <h1>Sightings</h1>
+    <div class="sub">WebGL background test — Civic Interplay palette</div>
+  </div>
+  <div id="controls">
+    <button class="ctrl active" onclick="setMode(0)">Deep water</button>
+    <button class="ctrl" onclick="setMode(1)">Mycelium</button>
+    <button class="ctrl" onclick="setMode(2)">Atmosphere</button>
+  </div>
+</div>
+
+<!-- Demo sighting cards -->
+<div class="card eco" style="left:8%;top:28%">
+  <div class="kl">Ecological</div>
+  A magpie calling from the fig tree, very insistent this morning
+</div>
+<div class="card soc" style="left:55%;top:18%">
+  <div class="kl">Social</div>
+  Three people stopped to look at the same puddle after the rain
+</div>
+<div class="card sen" style="left:30%;top:55%">
+  <div class="kl">Sensory</div>
+  The smell of jasmine coming from somewhere I still haven't found
+</div>
+<div class="card cul" style="left:68%;top:52%">
+  <div class="kl">Cultural</div>
+  Old sandstone wall with ferns growing in every crack
+</div>
+<div class="card wat" style="left:15%;top:68%">
+  <div class="kl">Water</div>
+  Puddles reflecting the plane trees, sky doubled
+</div>
+
+<div id="label">WebGL GLSL fragment shader · Three.js · sightings.civicinterplay.io</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ---- Three.js WebGL setup ----
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+
+const scene = new THREE.Scene();
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+const geometry = new THREE.PlaneGeometry(2, 2);
+
+// ---- Shader modes ----
+const MODES = {
+  // Deep water — luminous depth, slow tidal movement, bioluminescent traces
+  0: `
+    vec3 palette(float t) {
+      // Civic Interplay palette mapped to water depth
+      vec3 deep   = vec3(0.490, 0.314, 0.741); // #7D50BD purple
+      vec3 mid    = vec3(0.541, 0.608, 0.867); // #8E9BDD periwinkle
+      vec3 surface= vec3(0.878, 0.463, 0.855); // #E076DB pink
+      vec3 light  = vec3(0.973, 0.875, 0.965); // #F8DFF6 lavender
+      if (t < 0.33) return mix(deep, mid, t * 3.0);
+      if (t < 0.66) return mix(mid, surface, (t - 0.33) * 3.0);
+      return mix(surface, light, (t - 0.66) * 3.0);
+    }
+
+    float hash(vec2 p) {
+      p = fract(p * vec2(127.1, 311.7));
+      p += dot(p, p + 17.5);
+      return fract(p.x * p.y);
+    }
+
+    float noise(vec2 p) {
+      vec2 i = floor(p), f = fract(p);
+      vec2 u = f * f * (3.0 - 2.0 * f);
+      return mix(
+        mix(hash(i), hash(i + vec2(1,0)), u.x),
+        mix(hash(i + vec2(0,1)), hash(i + vec2(1,1)), u.x),
+        u.y
+      );
+    }
+
+    float fbm(vec2 p) {
+      float v = 0.0, a = 0.5;
+      for (int i = 0; i < 6; i++) {
+        v += a * noise(p);
+        p = p * 2.1 + vec2(1.7, 9.2);
+        a *= 0.5;
+      }
+      return v;
+    }
+
+    void main() {
+      vec2 uv = vUv;
+      float t = u_time * 0.06;
+
+      // Deep layered fbm — slow, tidal
+      vec2 q = vec2(fbm(uv + t * 0.3), fbm(uv + vec2(1.0)));
+      vec2 r = vec2(
+        fbm(uv + 1.0 * q + vec2(1.7, 9.2) + 0.15 * t),
+        fbm(uv + 1.0 * q + vec2(8.3, 2.8) + 0.126 * t)
+      );
+      float f = fbm(uv + r);
+
+      // Bioluminescent streaks
+      float streak = pow(max(0.0, sin(uv.x * 8.0 + f * 6.0 + t * 0.4) * 0.5 + 0.5), 8.0);
+      float streak2 = pow(max(0.0, sin(uv.y * 5.0 + f * 4.0 - t * 0.3) * 0.5 + 0.5), 12.0);
+
+      vec3 col = palette(f * 0.5 + 0.5);
+      col += vec3(0.4, 0.7, 0.9) * streak * 0.3;
+      col += vec3(0.8, 0.4, 0.9) * streak2 * 0.2;
+      col *= 0.85; // keep it dark/rich
+
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `,
+
+  // Mycelium — branching network, slow pulse, warm organic
+  1: `
+    vec3 palette(float t) {
+      vec3 dark   = vec3(0.271, 0.306, 0.255); // #454E41 olive
+      vec3 warm   = vec3(0.816, 0.424, 0.329); // #D16D54 terracotta
+      vec3 light  = vec3(0.855, 0.800, 0.729); // #DACCBA sand
+      vec3 glow   = vec3(0.973, 0.875, 0.965); // #F8DFF6 lavender
+      if (t < 0.4) return mix(dark, warm, t * 2.5);
+      if (t < 0.7) return mix(warm, light, (t - 0.4) * 3.33);
+      return mix(light, glow, (t - 0.7) * 3.33);
+    }
+
+    float hash(vec2 p) {
+      return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5);
+    }
+
+    float noise(vec2 p) {
+      vec2 i = floor(p), f = fract(p);
+      vec2 u = f * f * (3.0 - 2.0 * f);
+      return mix(mix(hash(i), hash(i+vec2(1,0)), u.x),
+                 mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), u.x), u.y);
+    }
+
+    float fbm(vec2 p) {
+      float v = 0.0, a = 0.5;
+      mat2 rot = mat2(0.8, 0.6, -0.6, 0.8);
+      for (int i = 0; i < 5; i++) {
+        v += a * noise(p);
+        p = rot * p * 2.0 + vec2(3.1, 7.4);
+        a *= 0.52;
+      }
+      return v;
+    }
+
+    // Distance to nearest branching line
+    float branches(vec2 p, float t) {
+      float d = 1e10;
+      for (int i = 0; i < 8; i++) {
+        float fi = float(i);
+        vec2 a = vec2(hash(vec2(fi, 0.0)), hash(vec2(fi, 1.0)));
+        vec2 b = a + vec2(cos(fi * 2.4 + t * 0.1), sin(fi * 1.9 + t * 0.08)) * 0.4;
+        vec2 pa = p - a, ba = b - a;
+        float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+        d = min(d, length(pa - ba * h));
+      }
+      return d;
+    }
+
+    void main() {
+      vec2 uv = vUv;
+      float t = u_time * 0.05;
+
+      float f = fbm(uv * 2.5 + t * 0.2);
+      float f2 = fbm(uv * 4.0 - t * 0.15 + f);
+
+      // Mycelium threads
+      float br = branches(uv + f * 0.15, t);
+      float thread = smoothstep(0.03, 0.0, br);
+      float pulse = sin(t * 2.0 + br * 20.0) * 0.5 + 0.5;
+
+      vec3 col = palette(f2 * 0.6 + 0.4) * 0.7;
+      col += vec3(0.97, 0.88, 0.97) * thread * (0.5 + pulse * 0.4);
+      col += vec3(0.82, 0.42, 0.33) * thread * 0.2;
+
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `,
+
+  // Atmosphere — slow drift, aerial, light diffusion
+  2: `
+    vec3 palette(float t) {
+      vec3 a = vec3(0.490, 0.314, 0.741); // purple
+      vec3 b = vec3(0.878, 0.463, 0.855); // pink
+      vec3 c = vec3(0.541, 0.608, 0.867); // periwinkle
+      vec3 d = vec3(0.271, 0.306, 0.255); // olive dark
+      float s = fract(t * 3.0);
+      int idx = int(t * 3.0);
+      if (idx == 0) return mix(a, b, s);
+      if (idx == 1) return mix(b, c, s);
+      return mix(c, d, s);
+    }
+
+    float hash(vec2 p) {
+      p = fract(p * vec2(443.8975, 397.2973));
+      p += dot(p, p + 19.19);
+      return fract(p.x * p.y);
+    }
+
+    float smoothnoise(vec2 p) {
+      vec2 i = floor(p), f = fract(p);
+      f = f * f * f * (f * (f * 6.0 - 15.0) + 10.0); // quintic
+      return mix(mix(hash(i), hash(i+vec2(1,0)), f.x),
+                 mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), f.x), f.y);
+    }
+
+    float cloud(vec2 p, float t) {
+      float v = 0.0;
+      float amp = 1.0, freq = 1.0;
+      for (int i = 0; i < 7; i++) {
+        v += amp * smoothnoise(p * freq + vec2(t * 0.04 * freq, t * 0.02 * freq));
+        amp *= 0.48;
+        freq *= 2.13;
+      }
+      return v;
+    }
+
+    void main() {
+      vec2 uv = vUv;
+      float t = u_time * 0.04;
+
+      // Two cloud layers at different scales/speeds
+      float c1 = cloud(uv * 1.8 + vec2(t * 0.1, 0.0), t);
+      float c2 = cloud(uv * 3.2 - vec2(t * 0.06, t * 0.04), t * 1.3);
+      float c3 = cloud(uv * 0.7 + vec2(0.0, t * 0.05), t * 0.7);
+
+      float f = c1 * 0.5 + c2 * 0.3 + c3 * 0.2;
+
+      // Light rays from top
+      float ray = pow(max(0.0, 1.0 - abs(uv.x - 0.5) * 2.5), 3.0);
+      ray *= max(0.0, 1.0 - uv.y * 1.5) * 0.4;
+      ray *= sin(t * 0.3 + uv.x * 4.0) * 0.5 + 0.5;
+
+      vec3 col = palette(f);
+      col *= 0.8;
+      col += vec3(0.97, 0.88, 0.97) * ray;
+      col = mix(col, col * col, 0.3); // deepen darks
+
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `
+};
+
+// ---- Fragment shader template ----
+function makeShader(body) {
+  return `
+    precision highp float;
+    uniform float u_time;
+    uniform vec2 u_resolution;
+    varying vec2 vUv;
+    ${body}
+  `;
+}
+
+const vertexShader = `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = vec4(position, 1.0);
+  }
+`;
+
+let currentMode = 0;
+let material, mesh;
+
+function buildMaterial(mode) {
+  if (mesh) scene.remove(mesh);
+  if (material) material.dispose();
+
+  material = new THREE.ShaderMaterial({
+    vertexShader,
+    fragmentShader: makeShader(MODES[mode]),
+    uniforms: {
+      u_time: { value: 0 },
+      u_resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
+    }
+  });
+
+  mesh = new THREE.Mesh(geometry, material);
+  scene.add(mesh);
+}
+
+function setMode(n) {
+  currentMode = n;
+  buildMaterial(n);
+  document.querySelectorAll('.ctrl').forEach((b, i) => {
+    b.classList.toggle('active', i === n);
+  });
+}
+
+buildMaterial(0);
+
+// ---- Resize ----
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  if (material) {
+    material.uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
+  }
+});
+
+// ---- Animate ----
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  if (material) material.uniforms.u_time.value = clock.getElapsedTime();
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
