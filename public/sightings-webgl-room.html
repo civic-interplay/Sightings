@@ -100,13 +100,30 @@
     mix-blend-mode: overlay;
   }
 
+  /* ————— Shader veil — masks the brief flash when a mode swaps ————— */
+  .shader-veil {
+    position: fixed;
+    inset: 0;
+    z-index: 3;
+    background: #08060a;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .shader-veil.up { opacity: 0.92; }
+
   /* ————— Field where cards live ————— */
   #field {
     position: fixed;
     inset: 0;
     z-index: 5;
     pointer-events: none;
+    transform-origin: 50% 50%;
+    transition: transform 1500ms cubic-bezier(0.22, 1, 0.36, 1);
   }
+
+  /* Projection mode quietly swells the field so cards take the room */
+  body.projection #field { transform: scale(1.015); }
 
   /* ————— Card: a field-note pinned to the glass ————— */
   .card {
@@ -123,12 +140,52 @@
     cursor: grab;
     user-select: none;
     transform: translate(-50%, -50%);
-    transition: opacity 1.6s ease, filter 0.6s ease;
+    transition:
+      opacity 1.6s ease,
+      filter 0.6s ease,
+      transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 320ms cubic-bezier(0.22, 1, 0.36, 1);
     opacity: 0;
     filter: blur(4px);
   }
   .card.visible { opacity: 1; filter: none; }
   .card:active { cursor: grabbing; }
+
+  /* Drag lift — card rises above the field when grabbed */
+  .card.dragging {
+    transform: translate(-50%, -50%) scale(1.025);
+    filter: brightness(1.06);
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--card-tint, var(--olive)) 40%, transparent),
+      0 14px 36px -10px rgba(0, 0, 0, 0.5);
+    z-index: 6;
+  }
+
+  /* Fresh arrival — a soft kind-coloured halo that fades over ~3.6s */
+  .card.fresh {
+    animation: fresh-bloom 3600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes fresh-bloom {
+    0% {
+      box-shadow:
+        0 0 0 2px color-mix(in oklab, var(--card-tint, var(--olive)) 50%, transparent),
+        0 0 28px 10px color-mix(in oklab, var(--card-tint, var(--olive)) 30%, transparent);
+    }
+    40% {
+      box-shadow:
+        0 0 0 1px color-mix(in oklab, var(--card-tint, var(--olive)) 30%, transparent),
+        0 0 44px 16px color-mix(in oklab, var(--card-tint, var(--olive)) 20%, transparent);
+    }
+    100% { box-shadow: none; }
+  }
+
+  /* Departing — fades and blurs out before being removed from the DOM */
+  .card.departing {
+    opacity: 0;
+    filter: blur(6px);
+    transition: opacity 1.2s ease-out, filter 1.2s ease-out;
+    pointer-events: none;
+  }
 
   .card-head {
     display: flex;
@@ -314,7 +371,7 @@
     position: fixed;
     bottom: clamp(62px, 7vw, 96px);
     left: 50%;
-    transform: translateX(-50%);
+    transform: translate(-50%, 8px);
     max-width: 46ch;
     text-align: center;
     font-family: var(--font-body);
@@ -322,12 +379,17 @@
     color: var(--text-soft);
     letter-spacing: 0.01em;
     line-height: 1.5;
-    transition: opacity 2.5s ease;
+    transition:
+      opacity 2.5s ease,
+      transform 2.5s cubic-bezier(0.22, 1, 0.36, 1);
     opacity: 0;
     pointer-events: none;
     text-wrap: balance;
   }
-  .contemplation.visible { opacity: 0.85; }
+  .contemplation.visible {
+    opacity: 0.85;
+    transform: translate(-50%, 0);
+  }
 
   /* ————— Projection mode hides all chrome ————— */
   body.projection #chrome { opacity: 0; pointer-events: none; }
@@ -336,7 +398,20 @@
 
   @media (prefers-reduced-motion: reduce) {
     .specimen, .masthead .slug .tick { animation: none; }
-    .card { transition: opacity 0.8s linear, filter 0.4s linear; }
+    .card {
+      transition: opacity 0.4s linear, filter 0.2s linear;
+    }
+    .card.dragging { transform: translate(-50%, -50%); filter: none; box-shadow: none; }
+    .card.fresh { animation: none; }
+    .card.departing { transition: opacity 0.4s linear; filter: none; }
+    .shader-veil { transition: opacity 120ms ease; }
+    #field { transition: none; }
+    body.projection #field { transform: none; }
+    .contemplation {
+      transition: opacity 0.6s ease;
+      transform: translate(-50%, 0);
+    }
+    body.no-shader { animation: none; }
   }
 </style>
 </head>
@@ -345,6 +420,7 @@
 <canvas id="c"></canvas>
 <div id="vignette"></div>
 <div id="grain"></div>
+<div id="shaderVeil" class="shader-veil"></div>
 
 <div id="field"></div>
 
@@ -641,13 +717,29 @@ function buildMaterial(modeIdx) {
   scene.add(mesh);
 }
 
-function setMode(n) {
+function applyMode(n) {
   currentMode = ((n % MODES.length) + MODES.length) % MODES.length;
   if (scene) buildMaterial(currentMode);
   const m = MODES[currentMode];
   document.getElementById('modeLede').textContent = m.lede;
   document.getElementById('modeName').textContent = m.name;
   document.getElementById('statusMode').textContent = m.name.toLowerCase();
+}
+
+/* User-initiated mode change — with veil crossfade to mask the material swap */
+let modeSwitching = false;
+function setMode(n) {
+  if (modeSwitching) return;
+  const next = ((n % MODES.length) + MODES.length) % MODES.length;
+  if (next === currentMode) return;
+  modeSwitching = true;
+  const veil = document.getElementById('shaderVeil');
+  veil.classList.add('up');
+  setTimeout(() => {
+    applyMode(next);
+    veil.classList.remove('up');
+    setTimeout(() => { modeSwitching = false; }, 800);
+  }, 700);
 }
 
 window.addEventListener('resize', () => {
@@ -696,6 +788,11 @@ const field = document.getElementById('field');
 let W = window.innerWidth, H = window.innerHeight;
 let sightings = [];
 let cardNodes = [];
+const cardById = new Map();              // stable id -> node
+const kindCounters = {                    // assigned once per card on first appearance
+  ecological: 0, social: 0, sensory: 0, cultural: 0, water: 0
+};
+let initialSyncDone = false;              // first sync fades cards in; later syncs mark new ones as "fresh"
 let dragTarget = null;
 
 window.addEventListener('resize', () => { W = window.innerWidth; H = window.innerHeight; });
@@ -726,69 +823,106 @@ function escapeHtml(s) {
   ));
 }
 
-function renderCards() {
-  field.innerHTML = '';
-  cardNodes = [];
-  const perKindIdx = {};
+function sightingId(s, fallbackIdx) {
+  return s.id || ('fb-' + hashStr((s.text || '') + (s.timestamp || fallbackIdx)));
+}
 
-  sightings.forEach((s, i) => {
-    const kind = s.kind || 'ecological';
-    perKindIdx[kind] = (perKindIdx[kind] || 0) + 1;
-    const serial = `№ ${KIND_CODE[kind] || 'NIL'}-${String(perKindIdx[kind]).padStart(3, '0')}`;
+function makeCard(s, fallbackIdx) {
+  const kind = s.kind || 'ecological';
+  kindCounters[kind] = (kindCounters[kind] || 0) + 1;
+  const serial = `№ ${KIND_CODE[kind] || 'NIL'}-${String(kindCounters[kind]).padStart(3, '0')}`;
 
-    const rng = seededRand(hashStr(s.id || s.text || String(i)));
-    const baseX = typeof s.x === 'number' ? s.x : 0.12 + rng() * 0.76;
-    const baseY = typeof s.y === 'number' ? s.y : 0.18 + rng() * 0.62;
+  const id = sightingId(s, fallbackIdx);
+  const rng = seededRand(hashStr(id));
+  const baseX = typeof s.x === 'number' ? s.x : 0.12 + rng() * 0.76;
+  const baseY = typeof s.y === 'number' ? s.y : 0.18 + rng() * 0.62;
 
-    const el = document.createElement('div');
-    el.className = 'card';
-    el.style.setProperty('--card-tint', PALETTE[kind] || PALETTE.ecological);
-    el.innerHTML = `
-      <div class="card-head">
-        <div class="card-kind"><span class="specimen"></span>${KIND_LABEL[kind] || kind}</div>
-        <div class="card-serial">${serial}</div>
-      </div>
-      <div class="card-text">${escapeHtml(s.text || '')}</div>
-      <div class="card-foot">
-        ${s.location ? `<span class="loc">${escapeHtml(s.location)}</span><span class="dot">·</span>` : ''}
-        <span class="time">${formatTime(s.timestamp)}</span>
-      </div>
-    `;
-    field.appendChild(el);
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.style.setProperty('--card-tint', PALETTE[kind] || PALETTE.ecological);
+  el.innerHTML = `
+    <div class="card-head">
+      <div class="card-kind"><span class="specimen"></span>${KIND_LABEL[kind] || kind}</div>
+      <div class="card-serial">${serial}</div>
+    </div>
+    <div class="card-text">${escapeHtml(s.text || '')}</div>
+    <div class="card-foot">
+      ${s.location ? `<span class="loc">${escapeHtml(s.location)}</span><span class="dot">·</span>` : ''}
+      <span class="time">${formatTime(s.timestamp)}</span>
+    </div>
+  `;
+  field.appendChild(el);
 
-    const node = {
-      el, sighting: s,
-      bx: baseX, by: baseY,
-      px: baseX, py: baseY,
-      phase: rng() * Math.PI * 2,
-      dragging: false
-    };
-    cardNodes.push(node);
+  const node = {
+    el, sighting: s, id,
+    bx: baseX, by: baseY,
+    px: baseX, py: baseY,
+    phase: rng() * Math.PI * 2,
+    dragging: false
+  };
 
-    setTimeout(() => el.classList.add('visible'), 200 + i * 160);
-
-    el.addEventListener('pointerdown', e => {
-      e.preventDefault();
-      node.dragging = true;
-      dragTarget = node;
-      el.setPointerCapture(e.pointerId);
-      el.style.transition = 'none';
-    });
-    el.addEventListener('pointermove', e => {
-      if (!node.dragging) return;
-      node.px = e.clientX / W;
-      node.py = e.clientY / H;
-      node.bx = node.px;
-      node.by = node.py;
-    });
-    el.addEventListener('pointerup', e => {
-      node.dragging = false;
-      dragTarget = null;
-      el.releasePointerCapture(e.pointerId);
-    });
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    node.dragging = true;
+    dragTarget = node;
+    try { el.setPointerCapture(e.pointerId); } catch {}
+    el.classList.add('dragging');
+  });
+  el.addEventListener('pointermove', e => {
+    if (!node.dragging) return;
+    node.px = e.clientX / W;
+    node.py = e.clientY / H;
+    node.bx = node.px;
+    node.by = node.py;
+  });
+  el.addEventListener('pointerup', e => {
+    node.dragging = false;
+    dragTarget = null;
+    try { el.releasePointerCapture(e.pointerId); } catch {}
+    el.classList.remove('dragging');
   });
 
-  document.getElementById('counter').textContent = sightings.length;
+  return node;
+}
+
+/* syncCards: non-destructive diff against existing cards.
+   - Existing cards stay put (no flicker every poll)
+   - Genuinely new sightings fade in + get a kind-coloured bloom
+   - Departing sightings fade out over 1.2s then remove from DOM */
+function syncCards() {
+  const newIdSet = new Set();
+  sightings.forEach((s, i) => newIdSet.add(sightingId(s, i)));
+
+  // 1) Add new cards
+  let newCount = 0;
+  sightings.forEach((s, i) => {
+    const id = sightingId(s, i);
+    if (cardById.has(id)) return;
+    const node = makeCard(s, i);
+    cardById.set(id, node);
+    const delay = initialSyncDone ? 0 : 200 + newCount * 160;
+    setTimeout(() => node.el.classList.add('visible'), delay);
+    if (initialSyncDone) {
+      node.el.classList.add('fresh');
+      setTimeout(() => node.el.classList.remove('fresh'), 3700);
+    }
+    newCount++;
+  });
+
+  // 2) Fade out cards whose sightings have left the set
+  for (const [id, node] of cardById) {
+    if (newIdSet.has(id)) continue;
+    node.el.classList.add('departing');
+    const el = node.el;
+    setTimeout(() => { el.remove(); }, 1300);
+    cardById.delete(id);
+  }
+
+  // 3) Rebuild flat array used by driftCards
+  cardNodes = Array.from(cardById.values());
+
+  document.getElementById('counter').textContent = cardById.size;
+  initialSyncDone = true;
 }
 
 /* ————— Card drift: cards breathe with the shader current ————— */
@@ -834,7 +968,7 @@ async function fetchSightings() {
   } catch {
     sightings = DEMO;
   }
-  renderCards();
+  syncCards();
 }
 fetchSightings();
 setInterval(fetchSightings, 20000);
