@@ -669,7 +669,8 @@ function animate() {
   driftCards(t);
   if (renderer && scene && camera) renderer.render(scene, camera);
 }
-animate();
+/* animate() is booted at the bottom of the script, after all `let`
+   declarations (cardNodes, sightings, etc.) are out of the TDZ. */
 
 /* ————— Initialise shader once Three.js is available (or give up) ————— */
 (async () => {
@@ -887,6 +888,9 @@ document.addEventListener('keydown', e => {
   else if (k === 'p') toggleProjection();
   else if (k === 'escape' && document.body.classList.contains('projection')) toggleProjection();
 });
+
+/* ————— Boot the render loop (safe now that all lets are declared) ————— */
+animate();
 </script>
 </body>
 </html>
