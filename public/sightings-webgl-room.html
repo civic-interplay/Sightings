@@ -7,7 +7,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,500;1,400;1,500&family=Fragment+Mono:ital@0;1&family=Young+Serif&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@400;500&family=Fragment+Mono&family=Young+Serif&display=swap" rel="stylesheet">
 
 <style>
   :root {
@@ -166,7 +166,6 @@
 
   .card-serial {
     font-family: var(--font-mono);
-    font-style: italic;
     font-size: calc(var(--size-label) * 0.92);
     letter-spacing: 0.08em;
     color: var(--text-faint);
@@ -175,7 +174,6 @@
 
   .card-text {
     font-family: var(--font-body);
-    font-style: italic;
     font-weight: 400;
     font-size: var(--size-body);
     line-height: 1.45;
@@ -320,7 +318,6 @@
     max-width: 46ch;
     text-align: center;
     font-family: var(--font-body);
-    font-style: italic;
     font-size: calc(var(--size-body) * 1.05);
     color: var(--text-soft);
     letter-spacing: 0.01em;
@@ -361,8 +358,8 @@
   </div>
 
   <button class="mode-cycler" id="modeCycler" title="Cycle atmosphere (M)">
-    <span class="lede" id="modeLede">I</span>
-    <span class="name" id="modeName">Deep water</span>
+    <span class="lede" id="modeLede">III</span>
+    <span class="name" id="modeName">Aer</span>
   </button>
 
   <p class="contemplation" id="contemplation"></p>
@@ -370,7 +367,7 @@
   <div class="status">
     <span><span class="count" id="counter">0</span> noticings</span>
     <span class="dot">·</span>
-    <span id="statusMode">deep water</span>
+    <span id="statusMode">aer</span>
     <span class="dot">·</span>
     <span id="statusClock">—</span>
   </div>
@@ -625,7 +622,7 @@ function makeFragment(body) {
   `;
 }
 
-let currentMode = 0;
+let currentMode = 2; // default to Aer — atmospheric mode
 let material = null, mesh = null;
 
 function buildMaterial(modeIdx) {
