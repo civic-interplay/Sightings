@@ -372,6 +372,53 @@ function applyWorkshopConfig() {
     gardenLink.href = `/${WORKSHOP_SLUG}/garden`;
   }
   if (c.backgroundVideo) applyBackgroundVideo(c.backgroundVideo);
+  if (c.form) applyWorkshopForm(c.form);
+}
+
+function applyWorkshopForm(form) {
+  if (!form) return;
+  const textInput     = document.getElementById('input-text');
+  const locationInput = document.getElementById('input-location');
+  const kindSelect    = document.getElementById('input-kind');
+  const textLabel     = textInput     ? textInput.previousElementSibling     : null;
+  const locationLabel = locationInput ? locationInput.previousElementSibling : null;
+  const kindLabel     = kindSelect    ? kindSelect.previousElementSibling    : null;
+
+  // Labels
+  if (form.textLabel     && textLabel)     textLabel.textContent     = form.textLabel;
+  if (form.locationLabel && locationLabel) locationLabel.textContent = form.locationLabel;
+  if (form.kindLabel     && kindLabel)     kindLabel.textContent     = form.kindLabel;
+
+  // Placeholders
+  if (form.textPlaceholder     && textInput)     textInput.placeholder     = form.textPlaceholder;
+  if (form.locationPlaceholder && locationInput) locationInput.placeholder = form.locationPlaceholder;
+
+  // Kind options (replace entirely if provided)
+  if (form.kindOptions && form.kindOptions.length > 0 && kindSelect) {
+    kindSelect.innerHTML = '';
+    form.kindOptions.forEach(opt => {
+      const option = document.createElement('option');
+      option.value = opt.value;
+      option.textContent = opt.label;
+      kindSelect.appendChild(option);
+    });
+  }
+
+  // Hide whole fields if requested
+  if (form.hideLocation && locationLabel && locationInput) {
+    locationLabel.style.display = 'none';
+    locationInput.style.display = 'none';
+  }
+  if (form.hideKind && kindLabel && kindSelect) {
+    kindLabel.style.display = 'none';
+    kindSelect.style.display = 'none';
+  }
+
+  // Submit button text
+  if (form.submitLabel) {
+    const submitBtn = document.querySelector('.btn-submit');
+    if (submitBtn) submitBtn.textContent = form.submitLabel;
+  }
 }
 
 function applyBackgroundVideo(url) {
