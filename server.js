@@ -24,8 +24,10 @@ function readWorkshops() {
     return {
       public: {
         title: 'Sightings',
+        subtitle: 'Civic Interplay',
         prompt: 'What do you notice?',
-        subprompt: "We're inviting you to share a hidden intelligence you feel is shaping the place you're in."
+        invitation: "We're inviting you to share a hidden intelligence you feel is shaping the place you're in.",
+        mode: 'open'
       }
     };
   }
