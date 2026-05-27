@@ -308,6 +308,49 @@
 </div>
 
 <script>
+// ---- Workshop scoping ----
+function deriveWorkshopSlug() {
+  const path = window.location.pathname.replace(/^\/|\/$/g, '');
+  if (!path || path === 'garden' || path === 'moderate') return 'public';
+  return path.split('/')[0];
+}
+const WORKSHOP_SLUG = deriveWorkshopSlug();
+let WORKSHOP_CONFIG = null;
+
+async function loadWorkshopConfig() {
+  try {
+    const res = await fetch(`/api/workshops/${WORKSHOP_SLUG}`);
+    if (!res.ok) throw new Error();
+    WORKSHOP_CONFIG = await res.json();
+  } catch {
+    WORKSHOP_CONFIG = {
+      title: 'Garden of Sightings',
+      subtitle: 'Civic Interplay',
+      prompt: 'Plant a seed',
+      invitation: "Share a hidden intelligence you feel is shaping the place you're in."
+    };
+  }
+  applyWorkshopConfig();
+}
+
+function applyWorkshopConfig() {
+  const c = WORKSHOP_CONFIG;
+  // For the garden view, prefix the title to keep the metaphor visible
+  const headerTitle = WORKSHOP_SLUG === 'public' ? 'Garden of Sightings' : `${c.title} · Garden`;
+  document.querySelector('#header h1').textContent = headerTitle;
+  document.querySelector('#header .subtitle').textContent = c.subtitle || 'Civic Interplay';
+  document.getElementById('contribute-btn').textContent = c.prompt;
+  document.querySelector('#panel h2').textContent = c.prompt;
+  document.querySelector('#panel .invitation').textContent = c.invitation || '';
+  document.title = headerTitle + ' — Civic Interplay';
+  // Preserve workshop slug on the tapestry link (back to /<slug>)
+  const tapestryLink = document.querySelector('a[href="/"]');
+  if (tapestryLink && WORKSHOP_SLUG !== 'public') {
+    tapestryLink.href = `/${WORKSHOP_SLUG}`;
+  }
+}
+loadWorkshopConfig();
+
 const PALETTE = {
   ecological: '#454E41',
   social:     '#D16D54',
@@ -680,7 +723,7 @@ const DEMO = [
 
 async function fetchSightings() {
   try {
-    const res = await fetch('/api/sightings');
+    const res = await fetch(`/api/sightings?workshop=${WORKSHOP_SLUG}`);
     if (!res.ok) throw new Error();
     sightings = await res.json();
   } catch {
@@ -709,7 +752,8 @@ async function submitSighting() {
       body: JSON.stringify({
         text,
         location: document.getElementById('input-location').value.trim(),
-        kind: document.getElementById('input-kind').value
+        kind: document.getElementById('input-kind').value,
+        workshop: WORKSHOP_SLUG
       })
     });
     const s = await res.json();
