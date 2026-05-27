@@ -333,6 +333,47 @@
 </div>
 
 <script>
+// ---- Workshop scoping ----
+function deriveWorkshopSlug() {
+  const path = window.location.pathname.replace(/^\/|\/$/g, '');
+  if (!path || path === 'garden' || path === 'moderate') return 'public';
+  return path.split('/')[0];
+}
+const WORKSHOP_SLUG = deriveWorkshopSlug();
+let WORKSHOP_CONFIG = null;
+
+async function loadWorkshopConfig() {
+  try {
+    const res = await fetch(`/api/workshops/${WORKSHOP_SLUG}`);
+    if (!res.ok) throw new Error();
+    WORKSHOP_CONFIG = await res.json();
+  } catch {
+    WORKSHOP_CONFIG = {
+      title: 'Sightings',
+      subtitle: 'Civic Interplay',
+      prompt: 'What do you notice?',
+      invitation: "We're inviting you to share a hidden intelligence you feel is shaping the place you're in."
+    };
+  }
+  applyWorkshopConfig();
+}
+
+function applyWorkshopConfig() {
+  const c = WORKSHOP_CONFIG;
+  document.querySelector('#header h1').textContent = c.title;
+  document.querySelector('#header .subtitle').textContent = c.subtitle || 'Civic Interplay';
+  document.getElementById('contribute-btn').textContent = c.prompt;
+  document.querySelector('#panel h2').textContent = c.prompt;
+  document.querySelector('#panel .invitation').textContent = c.invitation || '';
+  document.title = c.title + ' — Civic Interplay';
+  // Preserve workshop slug on the garden link
+  const gardenLink = document.querySelector('a[href="/garden"]');
+  if (gardenLink && WORKSHOP_SLUG !== 'public') {
+    gardenLink.href = `/${WORKSHOP_SLUG}/garden`;
+  }
+}
+loadWorkshopConfig();
+
 // ---- Palette ----
 const PALETTE = {
   ecological: '#454E41',
@@ -741,7 +782,7 @@ const DEMO = [
 
 async function fetchSightings() {
   try {
-    const res = await fetch('/api/sightings');
+    const res = await fetch(`/api/sightings?workshop=${WORKSHOP_SLUG}`);
     if (!res.ok) throw new Error();
     const data = await res.json();
     data.forEach((s, i) => { if (!s._phase) s._phase = i * 0.7; });
@@ -774,7 +815,8 @@ async function submitSighting() {
       body: JSON.stringify({
         text,
         location: document.getElementById('input-location').value.trim(),
-        kind: document.getElementById('input-kind').value
+        kind: document.getElementById('input-kind').value,
+        workshop: WORKSHOP_SLUG
       })
     });
     const s = await res.json();
