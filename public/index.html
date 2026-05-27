@@ -371,6 +371,40 @@ function applyWorkshopConfig() {
   if (gardenLink && WORKSHOP_SLUG !== 'public') {
     gardenLink.href = `/${WORKSHOP_SLUG}/garden`;
   }
+  if (c.backgroundVideo) applyBackgroundVideo(c.backgroundVideo);
+}
+
+function applyBackgroundVideo(url) {
+  // Hide procedural background canvases so the video reads cleanly
+  ['canvas-flow', 'canvas-noise'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  // Inject the video element behind the cards
+  const video = document.createElement('video');
+  video.src = url;
+  video.autoplay = true;
+  video.loop = true;
+  video.muted = true;
+  video.playsInline = true;
+  Object.assign(video.style, {
+    position: 'fixed', top: '0', left: '0',
+    width: '100%', height: '100%',
+    objectFit: 'cover',
+    zIndex: '0',
+    pointerEvents: 'none'
+  });
+  document.body.insertBefore(video, document.body.firstChild);
+  // Subtle dark overlay so cards stay readable
+  const overlay = document.createElement('div');
+  Object.assign(overlay.style, {
+    position: 'fixed', top: '0', left: '0',
+    width: '100%', height: '100%',
+    background: 'rgba(0,0,0,0.35)',
+    zIndex: '1',
+    pointerEvents: 'none'
+  });
+  document.body.insertBefore(overlay, video.nextSibling);
 }
 loadWorkshopConfig();
 
