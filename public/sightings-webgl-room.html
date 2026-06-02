@@ -343,10 +343,53 @@
   .status .dot { opacity: 0.35; }
   .status .count { color: var(--sand); }
 
-  .keys {
+  /* Bottom-right action cluster: submit button + keys stacked */
+  .actions {
     position: fixed;
     bottom: clamp(18px, 2vw, 34px);
     right: clamp(20px, 2.2vw, 38px);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+  }
+
+  .plant-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: var(--size-label);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--pink);
+    background: color-mix(in oklab, var(--pink) 6%, rgba(8,6,10,0.5));
+    border: 1px solid color-mix(in oklab, var(--pink) 38%, rgba(218,204,186,0.14));
+    backdrop-filter: blur(6px) saturate(0.9);
+    -webkit-backdrop-filter: blur(6px) saturate(0.9);
+    padding: 10px 16px 10px 14px;
+    cursor: pointer;
+    transition:
+      background 0.3s ease,
+      border-color 0.3s ease,
+      color 0.3s ease,
+      transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .plant-btn .plus {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--pink);
+    box-shadow: 0 0 14px color-mix(in oklab, var(--pink) 55%, transparent);
+    animation: breathe 6s ease-in-out infinite;
+  }
+  .plant-btn:hover {
+    background: color-mix(in oklab, var(--pink) 16%, rgba(8,6,10,0.4));
+    border-color: var(--pink);
+    transform: translateY(-1px);
+  }
+
+  .keys {
     font-family: var(--font-mono);
     font-size: calc(var(--size-label) * 0.9);
     letter-spacing: 0.22em;
@@ -364,6 +407,181 @@
     color: var(--sand);
     border: 1px solid var(--rule-strong);
     background: rgba(218, 204, 186, 0.04);
+  }
+
+  /* ————— Submit panel: plant-a-noticing form ————— */
+  .panel-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: rgba(8, 6, 10, 0.55);
+    backdrop-filter: blur(8px) saturate(0.85);
+    -webkit-backdrop-filter: blur(8px) saturate(0.85);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 400ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .panel-backdrop.open { opacity: 1; pointer-events: auto; }
+
+  .panel {
+    position: fixed;
+    z-index: 21;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -48%) scale(0.98);
+    width: min(440px, 92vw);
+    max-height: 88vh;
+    overflow-y: auto;
+    padding: clamp(24px, 3vw, 36px) clamp(24px, 3vw, 34px);
+    background: color-mix(in oklab, var(--pink) 8%, rgba(8,6,10,0.92));
+    border: 1px solid color-mix(in oklab, var(--pink) 26%, rgba(218,204,186,0.16));
+    color: var(--sand);
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      opacity 480ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 480ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .panel.open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .panel-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: var(--size-label);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--pink);
+    margin-bottom: 22px;
+  }
+  .panel-head .specimen {
+    background: var(--pink);
+    box-shadow: 0 0 14px color-mix(in oklab, var(--pink) 60%, transparent);
+  }
+
+  .panel h2 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(22px, 1.8vw, 30px);
+    letter-spacing: 0.01em;
+    color: var(--sand);
+    margin-bottom: 10px;
+    line-height: 1.15;
+  }
+  .panel .lede {
+    font-family: var(--font-body);
+    font-size: calc(var(--size-body) * 0.96);
+    color: var(--text-soft);
+    line-height: 1.5;
+    margin-bottom: 22px;
+    text-wrap: pretty;
+  }
+
+  .panel label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: calc(var(--size-label) * 0.95);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin: 16px 0 8px;
+  }
+
+  .panel textarea,
+  .panel input[type="text"] {
+    width: 100%;
+    background: rgba(8, 6, 10, 0.5);
+    border: 1px solid var(--rule);
+    color: var(--sand);
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+    line-height: 1.45;
+    padding: 10px 12px;
+    resize: none;
+    outline: none;
+    transition: border-color 0.25s ease, background 0.25s ease;
+  }
+  .panel textarea:focus,
+  .panel input[type="text"]:focus {
+    border-color: color-mix(in oklab, var(--pink) 50%, rgba(218,204,186,0.3));
+    background: rgba(8, 6, 10, 0.7);
+  }
+
+  .kind-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 10px;
+    margin-top: 4px;
+  }
+  .kind-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: calc(var(--size-label) * 0.95);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+    transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+  }
+  .kind-chip input { display: none; }
+  .kind-chip .specimen { animation: none; }
+  .kind-chip:hover { color: var(--sand); background: rgba(218,204,186,0.03); }
+  .kind-chip:has(input:checked) {
+    border-color: color-mix(in oklab, var(--chip-tint, var(--olive)) 45%, rgba(218,204,186,0.25));
+    background: color-mix(in oklab, var(--chip-tint, var(--olive)) 12%, rgba(8,6,10,0.4));
+    color: var(--sand);
+  }
+  .kind-chip:has(input:checked) .specimen {
+    box-shadow: 0 0 14px color-mix(in oklab, var(--chip-tint, var(--olive)) 55%, transparent);
+  }
+
+  .panel-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+  }
+  .panel-btn {
+    font-family: var(--font-mono);
+    font-size: var(--size-label);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 10px 18px;
+    background: none;
+    cursor: pointer;
+    transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+  }
+  .panel-btn.secondary {
+    color: var(--text-soft);
+    border: 1px solid var(--rule);
+  }
+  .panel-btn.secondary:hover { color: var(--sand); border-color: var(--rule-strong); }
+  .panel-btn.primary {
+    color: var(--pink);
+    border: 1px solid color-mix(in oklab, var(--pink) 45%, rgba(218,204,186,0.2));
+    background: color-mix(in oklab, var(--pink) 10%, rgba(8,6,10,0.4));
+  }
+  .panel-btn.primary:hover {
+    background: color-mix(in oklab, var(--pink) 22%, rgba(8,6,10,0.4));
+    border-color: var(--pink);
+  }
+  .panel-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .panel-status {
+    margin-top: 12px;
+    font-family: var(--font-mono);
+    font-size: calc(var(--size-label) * 0.95);
+    letter-spacing: 0.14em;
+    color: var(--pink);
+    min-height: 1.4em;
   }
 
   /* Ambient contemplation text — cycles slowly at bottom-centre */
@@ -394,6 +612,8 @@
   /* ————— Projection mode hides all chrome ————— */
   body.projection #chrome { opacity: 0; pointer-events: none; }
   body.projection .contemplation { opacity: 0; }
+  body.projection .panel,
+  body.projection .panel-backdrop { opacity: 0; pointer-events: none; }
   body.projection { cursor: none; }
 
   @media (prefers-reduced-motion: reduce) {
@@ -412,6 +632,12 @@
       transform: translate(-50%, 0);
     }
     body.no-shader { animation: none; }
+    .plant-btn .plus { animation: none; }
+    .plant-btn:hover { transform: none; }
+    .panel-backdrop, .panel {
+      transition: opacity 0.25s ease;
+    }
+    .panel { transform: translate(-50%, -50%) scale(1); }
   }
 </style>
 </head>
@@ -448,10 +674,67 @@
     <span id="statusClock">—</span>
   </div>
 
-  <div class="keys">
-    <span><kbd>M</kbd>mode</span>
-    <span><kbd>P</kbd>projection</span>
+  <div class="actions">
+    <button class="plant-btn" id="plantBtn" title="Plant a noticing">
+      <span class="plus"></span>
+      <span>Plant a noticing</span>
+    </button>
+    <div class="keys">
+      <span><kbd>M</kbd>mode</span>
+      <span><kbd>P</kbd>projection</span>
+    </div>
   </div>
+</div>
+
+<!-- Submit panel -->
+<div class="panel-backdrop" id="panelBackdrop"></div>
+<div class="panel" id="panel" role="dialog" aria-labelledby="panelTitle" aria-modal="true">
+  <div class="panel-head">
+    <span class="specimen"></span>
+    <span>Field entry</span>
+  </div>
+  <h2 id="panelTitle">What do you notice?</h2>
+  <p class="lede">
+    Share a hidden intelligence you feel is shaping the place you're in —
+    something you hear, or see, or feel. Ecological, social, sensory, cultural,
+    of the water. Have fun and don't take it too seriously.
+  </p>
+
+  <label for="plant-text">Your noticing</label>
+  <textarea id="plant-text" rows="3" placeholder="Describe what you notice…" maxlength="400"></textarea>
+
+  <label for="plant-location">Where (optional)</label>
+  <input id="plant-location" type="text" placeholder="A place name, or just 'here'" maxlength="120">
+
+  <label>Kind of intelligence</label>
+  <div class="kind-grid" id="kindGrid">
+    <label class="kind-chip" style="--chip-tint: #454E41">
+      <input type="radio" name="plant-kind" value="ecological" checked>
+      <span class="specimen"></span><span>Ecological</span>
+    </label>
+    <label class="kind-chip" style="--chip-tint: #D16D54">
+      <input type="radio" name="plant-kind" value="social">
+      <span class="specimen"></span><span>Social</span>
+    </label>
+    <label class="kind-chip" style="--chip-tint: #E076DB">
+      <input type="radio" name="plant-kind" value="sensory">
+      <span class="specimen"></span><span>Sensory</span>
+    </label>
+    <label class="kind-chip" style="--chip-tint: #7D50BD">
+      <input type="radio" name="plant-kind" value="cultural">
+      <span class="specimen"></span><span>Cultural</span>
+    </label>
+    <label class="kind-chip" style="--chip-tint: #8E9BDD">
+      <input type="radio" name="plant-kind" value="water">
+      <span class="specimen"></span><span>Water</span>
+    </label>
+  </div>
+
+  <div class="panel-actions">
+    <button class="panel-btn secondary" id="plantCancel">Cancel</button>
+    <button class="panel-btn primary" id="plantSubmit">Plant</button>
+  </div>
+  <div class="panel-status" id="plantStatus"></div>
 </div>
 
 <script>
@@ -1013,8 +1296,81 @@ function toggleProjection() {
   document.body.classList.toggle('projection');
 }
 
+/* ————— Plant-a-noticing panel ————— */
+const panelEl = document.getElementById('panel');
+const panelBackdrop = document.getElementById('panelBackdrop');
+const panelStatus = document.getElementById('plantStatus');
+const plantText = document.getElementById('plant-text');
+const plantLocation = document.getElementById('plant-location');
+const plantSubmitBtn = document.getElementById('plantSubmit');
+
+function openPanel() {
+  panelEl.classList.add('open');
+  panelBackdrop.classList.add('open');
+  panelStatus.textContent = '';
+  setTimeout(() => plantText.focus(), 120);
+}
+function closePanel() {
+  panelEl.classList.remove('open');
+  panelBackdrop.classList.remove('open');
+}
+
+document.getElementById('plantBtn').addEventListener('click', openPanel);
+document.getElementById('plantCancel').addEventListener('click', closePanel);
+panelBackdrop.addEventListener('click', closePanel);
+
+async function submitPlant() {
+  const text = plantText.value.trim();
+  if (!text) {
+    plantStatus.textContent = 'Write something first.';
+    plantText.focus();
+    return;
+  }
+  const kind = (document.querySelector('input[name="plant-kind"]:checked') || {}).value || 'ecological';
+  const location = plantLocation.value.trim();
+
+  plantSubmitBtn.disabled = true;
+  plantStatus.textContent = 'Planting…';
+
+  try {
+    const res = await fetch('/api/sightings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, location, kind })
+    });
+    const s = await res.json();
+    if (s.status === 'approved') {
+      plantStatus.textContent = 'Your noticing has joined the field.';
+      // Optimistically add to sightings so the fresh-bloom fires immediately
+      sightings = [s, ...sightings];
+      syncCards();
+    } else if (s.status === 'pending') {
+      plantStatus.textContent = 'Thank you — your noticing is with the hosts.';
+    } else {
+      plantStatus.textContent = "This one couldn't be planted.";
+    }
+    plantText.value = '';
+    plantLocation.value = '';
+    setTimeout(() => { closePanel(); plantSubmitBtn.disabled = false; }, 1800);
+  } catch {
+    plantStatus.textContent = "Couldn't reach the server. Try again?";
+    plantSubmitBtn.disabled = false;
+  }
+}
+
+plantSubmitBtn.addEventListener('click', submitPlant);
+plantText.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitPlant();
+});
+
 document.addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
+  const panelOpen = panelEl.classList.contains('open');
+  // Don't intercept M/P shortcuts while typing in the panel
+  if (panelOpen) {
+    if (k === 'escape') closePanel();
+    return;
+  }
   if (k === 'm') setMode(currentMode + 1);
   else if (k === 'p') toggleProjection();
   else if (k === 'escape' && document.body.classList.contains('projection')) toggleProjection();
