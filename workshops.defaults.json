@@ -1,0 +1,56 @@
+{
+  "public": {
+    "title": "Sightings",
+    "prompt": "What do you notice?",
+    "invitation": "We're inviting you to share a version of the intelligence you feel is shaping the place you're in. It might be something you hear, or see, or feel. It might be ecological, or social, or technological, or something else.",
+    "mode": "open"
+  },
+
+  "gi-singapore-2026-interior": {
+    "title": "Gathering Intelligences Singapore 2026 — The Questions",
+    "prompt": "What kind of vessel are you?",
+    "invitation": "",
+    "mode": "interior",
+    "backgroundVideo": "https://pub-3c698ebb77b146ac884e0a95b8523934.r2.dev/superorganism/dji-superorganism.mp4",
+    "form": {
+      "textLabel": "What kind of vessel are you?",
+      "textPlaceholder": "",
+      "kindLabel": "What story are you carrying with you as you enter this landscape?",
+      "kindOptions": [
+        { "value": "ecological", "label": "A story of hope" },
+        { "value": "social", "label": "A story of discernment" },
+        { "value": "sensory", "label": "A story of displacement" },
+        { "value": "cultural", "label": "A story of belonging" },
+        { "value": "water", "label": "A different story (please define)" }
+      ],
+      "otherValue": "water",
+      "locationLabel": "A different story",
+      "locationPlaceholder": "Please define",
+      "submitLabel": "Offer this"
+    }
+  },
+
+  "gi-singapore-2026-miyawaki": {
+    "title": "Gathering Intelligences Singapore 2026 — The Miyawaki Forest",
+    "prompt": "What kind of vessel are you?",
+    "invitation": "",
+    "mode": "interior",
+    "backgroundVideo": "https://pub-3c698ebb77b146ac884e0a95b8523934.r2.dev/superorganism/miyawaki.mp4",
+    "form": {
+      "textLabel": "What kind of vessel are you?",
+      "textPlaceholder": "",
+      "kindLabel": "What story are you carrying with you as you enter this landscape?",
+      "kindOptions": [
+        { "value": "ecological", "label": "A story of hope" },
+        { "value": "social", "label": "A story of discernment" },
+        { "value": "sensory", "label": "A story of displacement" },
+        { "value": "cultural", "label": "A story of belonging" },
+        { "value": "water", "label": "A different story (please define)" }
+      ],
+      "otherValue": "water",
+      "locationLabel": "A different story",
+      "locationPlaceholder": "Please define",
+      "submitLabel": "Offer this"
+    }
+  }
+}

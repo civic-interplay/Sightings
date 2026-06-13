@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sightings — Civic Interplay</title>
 <style>
+  /* sarahbsite typeface stack: Inter (body/display) + IBM Plex Mono (labels) */
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   :root {
@@ -46,25 +49,34 @@
 
   .sighting-card {
     position: absolute;
-    max-width: 220px;
+    max-width: 240px;
     padding: 10px 13px;
     border-radius: 4px;
-    font-size: 13px;
-    line-height: 1.5;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
     cursor: grab;
     user-select: none;
-    transition: box-shadow 0.3s;
+    transition: box-shadow 0.3s, opacity 1.6s ease;
     transform: translate(-50%, -50%);
   }
   .sighting-card:active { cursor: grabbing; }
   .sighting-card .kind-label {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
     font-size: 10px;
+    font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.12em;
     margin-bottom: 5px;
     opacity: 0.7;
   }
-  .sighting-card .sighting-text { font-style: italic; }
+  /* Responses read bold and present, sarahbsite-style, not the old Georgia italic */
+  .sighting-card .sighting-text {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  /* Fade-out lifecycle: a card lingers, then exhales away (~25s after it lands) */
+  .sighting-card.fading { opacity: 0; }
   .sighting-card .location {
     font-size: 11px;
     margin-top: 6px;
@@ -412,6 +424,20 @@ function applyWorkshopForm(form) {
   if (form.hideKind && kindLabel && kindSelect) {
     kindLabel.style.display = 'none';
     kindSelect.style.display = 'none';
+  }
+
+  // "Other → please define": the location field is revealed as a write-in only
+  // when the designated option is chosen, so a brief can offer preset choices
+  // plus a custom one. No server change — the typed story rides along in `location`.
+  if (form.otherValue && kindSelect && locationLabel && locationInput) {
+    const toggleOther = () => {
+      const show = kindSelect.value === form.otherValue;
+      locationLabel.style.display = show ? '' : 'none';
+      locationInput.style.display = show ? '' : 'none';
+      if (!show) locationInput.value = '';
+    };
+    kindSelect.addEventListener('change', toggleOther);
+    toggleOther();
   }
 
   // Submit button text
@@ -824,32 +850,54 @@ document.addEventListener('touchend', e => {
   if (e.touches.length < 2) lastDist = null;
 });
 
-// ---- Render sightings ----
+// ---- Render sightings (incremental + tidal fade-out) ----
+// Cards are added as they arrive and retired ~25s after they land, so the
+// projected field breathes rather than accreting forever. Fading is display
+// only: every sighting stays saved server-side (data/sightings.json) and in the
+// /moderate dashboard. Retired ids are filtered out so they never re-appear,
+// and the running counter reflects everything shared, not just what's on screen.
+const FADE_AFTER_MS = 25000;   // how long a card lingers before it exhales away
+const retiredIds = new Set();  // faded out — kept out of the view and the canvas
+const seenIds = new Set();     // everything ever shown this session (for the counter)
+
+function retireSighting(id) {
+  if (retiredIds.has(id)) return;
+  retiredIds.add(id);
+  const el = tapestry.querySelector(`[data-id="${id}"]`);
+  if (el) {
+    el.classList.add('fading');
+    el.addEventListener('transitionend', () => el.remove(), { once: true });
+    setTimeout(() => { if (el.isConnected) el.remove(); }, 2500); // fallback
+  }
+  // Drop it from the data the canvas layers read, and invalidate stale thread
+  // indices (semanticPairs is index-based and recomputes on the next fetch).
+  sightingData = sightingData.filter(s => s.id !== id);
+  semanticPairs = [];
+}
+
 function renderSightings() {
-  tapestry.innerHTML = '';
-  sightingData.filter(s => s.status === 'approved').forEach(s => {
+  const approved = sightingData.filter(s => s.status === 'approved' && !retiredIds.has(s.id));
+  approved.forEach(s => {
+    seenIds.add(s.id);
+    if (tapestry.querySelector(`[data-id="${s.id}"]`)) return; // already on screen
     const div = document.createElement('div');
     div.className = `sighting-card kind-${s.kind}`;
     div.dataset.id = s.id;
     div.style.left = (s.x * 100) + '%';
     div.style.top  = (s.y * 100) + '%';
 
-    const tags = [...(s.species||[]), ...(s.actions||[])].slice(0,3)
-      .map(t => `<span class="tag">${t}</span>`).join('');
-
     div.innerHTML = `
       <div class="kind-label">${s.kind}</div>
       <div class="sighting-text">${s.text}</div>
       ${s.location ? `<div class="location">↳ ${s.location}</div>` : ''}
-      ${tags ? `<div class="species-tags">${tags}</div>` : ''}
     `;
     tapestry.appendChild(div);
+    setTimeout(() => retireSighting(s.id), FADE_AFTER_MS);
   });
 
-  const approved = sightingData.filter(s => s.status === 'approved').length;
-  sightingCount = approved;
+  sightingCount = seenIds.size;
   document.getElementById('counter').textContent =
-    `${approved} sighting${approved !== 1 ? 's' : ''}`;
+    `${seenIds.size} sighting${seenIds.size !== 1 ? 's' : ''}`;
 }
 
 // ---- Fetch ----
@@ -868,9 +916,10 @@ async function fetchSightings() {
     const data = await res.json();
     data.forEach((s, i) => { if (!s._phase) s._phase = i * 0.7; });
     const prevCount = sightingData.length;
-    sightingData = data;
+    // Drop already-retired sightings so a faded card never re-materialises.
+    sightingData = data.filter(s => !retiredIds.has(s.id));
     // Recompute semantic pairs when sightings change
-    if (data.length !== prevCount) computeSemanticSimilarity();
+    if (sightingData.length !== prevCount) computeSemanticSimilarity();
   } catch {
     sightingData = DEMO;
   }
