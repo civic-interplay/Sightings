@@ -8,29 +8,44 @@ const { readSightings, writeSightings, moderate, autoTag } = require('./storage'
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Workshops config lives alongside sightings data so it persists on Render Disk.
-// Adjust the path if your sightings data lives somewhere else.
+// Workshop config comes from two layers, merged at read time:
+//   1. workshops.defaults.json — tracked in git, the source of truth for
+//      workshops we ship (Sydney, Singapore, …).
+//   2. data/workshops.json — optional, lives on the Render Disk so a
+//      facilitator can tweak a workshop live without a deploy.
+// The disk layer wins per-slug, so on-the-day edits are never clobbered by a
+// deploy, and brand-new workshops still ship straight from the repo.
+const WORKSHOPS_DEFAULTS_FILE = path.join(__dirname, 'workshops.defaults.json');
 const WORKSHOPS_FILE = path.join(__dirname, 'data', 'workshops.json');
 
 // Slugs that can't be used as workshop names because they collide with existing routes.
 const RESERVED_SLUGS = ['api', 'garden', 'moderate', 'public', 'assets', 'static', 'data'];
 
-// Read workshops config from disk. Falls back to a minimal 'public' workshop
-// so the server starts even if the file doesn't exist yet.
-function readWorkshops() {
+function readJsonOrEmpty(file) {
   try {
-    return JSON.parse(fs.readFileSync(WORKSHOPS_FILE, 'utf8'));
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch {
-    return {
-      public: {
-        title: 'Sightings',
-        subtitle: 'Civic Interplay',
-        prompt: 'What do you notice?',
-        invitation: "We're inviting you to share a hidden intelligence you feel is shaping the place you're in.",
-        mode: 'open'
-      }
+    return {};
+  }
+}
+
+// Read workshops config: tracked defaults overlaid with any Render-disk edits.
+// Always guarantees a 'public' workshop so the server is usable even with no
+// config files present.
+function readWorkshops() {
+  const defaults = readJsonOrEmpty(WORKSHOPS_DEFAULTS_FILE);
+  const disk = readJsonOrEmpty(WORKSHOPS_FILE);
+  const merged = { ...defaults, ...disk };
+  if (!merged.public) {
+    merged.public = {
+      title: 'Sightings',
+      subtitle: 'Civic Interplay',
+      prompt: 'What do you notice?',
+      invitation: "We're inviting you to share a hidden intelligence you feel is shaping the place you're in.",
+      mode: 'open'
     };
   }
+  return merged;
 }
 
 app.use(cors());
