@@ -8,13 +8,13 @@
 
   "gi-singapore-2026-interior": {
     "title": "Gathering Intelligences Singapore 2026 — The Questions",
-    "prompt": "What kind of vessel are you?",
+    "prompt": "What do you notice?",
     "invitation": "",
     "mode": "interior",
     "backgroundVideo": "https://pub-3c698ebb77b146ac884e0a95b8523934.r2.dev/superorganism/dji-superorganism.mp4",
     "form": {
-      "textLabel": "What kind of vessel are you?",
-      "textPlaceholder": "",
+      "textLabel": "What do you notice?",
+      "textPlaceholder": "What do you notice is hidden here and wants to be seen?",
       "kindLabel": "What story are you carrying with you as you enter this landscape?",
       "kindOptions": [
         { "value": "ecological", "label": "A story of hope" },
@@ -32,13 +32,13 @@
 
   "gi-singapore-2026-miyawaki": {
     "title": "Gathering Intelligences Singapore 2026 — The Miyawaki Forest",
-    "prompt": "What kind of vessel are you?",
+    "prompt": "What do you notice?",
     "invitation": "",
     "mode": "interior",
     "backgroundVideo": "https://pub-3c698ebb77b146ac884e0a95b8523934.r2.dev/superorganism/miyawaki.mp4",
     "form": {
-      "textLabel": "What kind of vessel are you?",
-      "textPlaceholder": "",
+      "textLabel": "What do you notice?",
+      "textPlaceholder": "What do you notice is hidden here and wants to be seen?",
       "kindLabel": "What story are you carrying with you as you enter this landscape?",
       "kindOptions": [
         { "value": "ecological", "label": "A story of hope" },
